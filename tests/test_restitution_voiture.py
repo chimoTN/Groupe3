@@ -1,7 +1,7 @@
 import unittest
 
-from lib.entities.client import Client
-from lib.entities.vehicule import Vehicule
+from ..lib.entities.client import Client
+from ..lib.entities.vehicule import Vehicule
 
 class TestRestitutionVoiture(unittest.TestCase):
 
