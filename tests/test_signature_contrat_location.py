@@ -21,6 +21,24 @@ from lib.use_cases.locationVehicule.signerContratDeLocation import (
     ContratLocationError
 )
 
+@pytest.fixture(autouse=True)
+def verify_no_calls_after_test(request, mock_repositories):
+    """
+    Fixture automatique qui vérifie qu'aucun appel supplémentaire n'est fait après le test.
+    S'applique automatiquement à tous les tests qui utilisent mock_repositories.
+    """
+    # Avant le test
+    yield
+    # Après le test
+    
+    # Réinitialiser d'abord les mocks
+    for repo in mock_repositories.values():
+        repo.reset_mock()
+    
+    # Vérifier qu'aucun autre appel n'est fait
+    for repo_name, repo in mock_repositories.items():
+        assert len(repo.mock_calls) == 0, f"Des méthodes supplémentaires ont été appelées sur le repository {repo_name} après la fin du test"
+
 # Fixtures pour les mocks
 @pytest.fixture
 def mock_repositories():
@@ -92,7 +110,7 @@ def test_client_inexistant(mock_repositories, future_date):
     # Vérifier que l'exception est levée
     with pytest.raises(ClientInexistantError):
         SignerContratDeLocation.main(
-            client_id=999,  # ID de client inexistant
+            client_id=-999,  # ID de client inexistant
             vehicule_id=2,
             date_debut=future_date,
             duree=7,
@@ -109,7 +127,7 @@ def test_vehicule_inexistant(mock_repositories, future_date):
     with pytest.raises(VehiculeInexistantError):
         SignerContratDeLocation.main(
             client_id=1,
-            vehicule_id=999,  # ID de véhicule inexistant
+            vehicule_id=-999,  # ID de véhicule inexistant
             date_debut=future_date,
             duree=7,
             assurance_id=3
@@ -128,7 +146,7 @@ def test_assurance_inexistante(mock_repositories, future_date):
             vehicule_id=2,
             date_debut=future_date,
             duree=7,
-            assurance_id=999  # ID d'assurance inexistant
+            assurance_id=-999  # ID d'assurance inexistant
         )
 
 
