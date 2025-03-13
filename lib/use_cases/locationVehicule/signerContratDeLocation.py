@@ -2,7 +2,8 @@ from datetime import date, timedelta
 from typing import Optional
 
 # Importations
-from entities.contratLocation import ContratLocation
+from lib.entities.contratLocation import ContratLocation
+
 from lib.repositories.clientRepository import ClientRepository
 from lib.repositories.vehiculeRepository import VehiculeRepository
 from lib.repositories.assuranceRepository import AssuranceRepository
