@@ -1,16 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from lib.repositories.clientRepository import ClientRepository
-
-from ..lib.repositories.vehiculeRepository import VehiculeRepository
-from ..lib.use_cases.locationVehicule.restitutionVehicule import RestitutionVehicule
-
-
+from ..lib.application.use_cases.restitutionVehicule import RestitutionVehicule
 from ..lib.domain.client import Client
 from ..lib.domain.vehicule import Vehicule
 
@@ -37,7 +28,7 @@ class TestRestitutionVoiture(unittest.TestCase):
             permis="123ABC", 
             telephone="0123456789", 
             email="john.doe@email",
-            voitureLouer=None
+            voitureLouer=None,
         )
         self.vehicule = Vehicule(
             marque="Peugeot", 

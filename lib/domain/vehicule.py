@@ -1,16 +1,17 @@
-class Vehicule:
+import dataclasses
+from .immatriculation import Immatriculation
 
-    def __init__(self, marque: str, modele: str, annee: int, immatriculation: str, kilometrage: int, prix_journalier: float, etat : str, typeVehicule: str, id: int | None = None):
-        self.marque = marque
-        self.modele = modele
-        self.annee = annee
-        self.immatriculation = immatriculation
-        self.kilometrage = kilometrage
-        self.prix_journalier = prix_journalier
-        self.disponible = True 
-        self.etat = etat
-        self.typeVehicule = typeVehicule
-        self.id = id
+@dataclasses.dataclass
+class Vehicule:
+    marque: str
+    modele: str
+    annee: int
+    immatriculation: Immatriculation
+    kilometrage: int
+    prix_journalier: float 
+    etat: str
+    typeVehicule: str
+    disponible: bool = True
 
     def louer(self) -> bool:
         """Marque la voiture comme louée si elle est disponible."""

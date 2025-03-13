@@ -1,6 +1,6 @@
 import pytest
 
-from ..lib.application.use_cases import RealiserPrestationUseCase
+from ..lib.application.use_cases.RealiserPrestationUseCase import RealiserPrestationUseCase
 from ..lib.application.exceptions import DevisIntrouvable
 from ..lib.domain.vehicule import Vehicule
 from ..lib.domain.devis import Devis

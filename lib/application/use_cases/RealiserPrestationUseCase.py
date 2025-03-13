@@ -1,9 +1,7 @@
 import pytest
 
 from ...domain.devis import Devis
-
-class DevisIntrouvable(Exception):
-    pass
+from ..exceptions import DevisIntrouvable
 
 class RealiserPrestationUseCase:
     def realiserPrestation(self, devis: Devis) -> Devis:

@@ -1,8 +1,7 @@
-from lib.repositories.clientRepository import ClientRepository
-from lib.repositories.vehiculeRepository import VehiculeRepository
+from ..ClientRepositoryPort import ClientRepositoryPort
+from ..VehiculeRepositoryPort import VehiculeRepositoryPort
 
 from typing import Optional
-from ...domain.client import Client
 from ...domain.vehicule import Vehicule
 
 class RestitutionVehicule:
@@ -17,8 +16,8 @@ class RestitutionVehicule:
     """
 
     def __init__(self,
-                 client_repository: ClientRepository,
-                 vehicule_repository: VehiculeRepository):
+                 client_repository: ClientRepositoryPort,
+                 vehicule_repository: VehiculeRepositoryPort):
         self.client_repository = client_repository
         self.vehicule_repository = vehicule_repository
 
@@ -50,6 +49,7 @@ class RestitutionVehicule:
         if vehicule not in client.historique_locations:
             print("Restitution échouée : ce véhicule n'est pas loué par ce client.")
             return None
+            
 
         # 3. Mettre à jour l'état du véhicule selon l’état constaté au retour
         #    On imagine que l’attribut `etat` du véhicule peut prendre des valeurs
@@ -89,6 +89,6 @@ class RestitutionVehicule:
         self.client_repository.save(client)
 
         # 8. Retourner l’objet véhicule mis à jour
-        print(f"Le véhicule {vehicule.marque} {vehicule.modele} (ID: {vehicule.id}) "
+        print(f"Le véhicule {vehicule.marque} {vehicule.modele} (ID: {vehicule.immatriculation}) "
               f"a été restitué par {client.nom} {client.prenom} avec l'état '{vehicule.etat}'.")
         return vehicule

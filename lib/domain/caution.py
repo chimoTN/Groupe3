@@ -1,12 +1,12 @@
+import dataclasses
 
+@dataclasses.dataclass
 class caution():
-
-    def __init__(self ,nameClient ,nameEmployer, dateSigniature, signatureClient, signatureEmployer):
-        self.nameClient = nameClient
-        self.nameEmployer = nameEmployer
-        self.dateSigniature = dateSigniature
-        self.signatureClient = signatureClient
-        self.signatureEmployer = signatureEmployer
+    nameClient: str
+    nameEmployer: str
+    dateSigniature: str
+    signatureClient: str
+    signatureEmployer: str
 
     #On signe la cotion
     def signiatureCautionClient():

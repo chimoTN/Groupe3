@@ -1,16 +1,17 @@
-from .vehicule import Vehicule
+import dataclasses
+from .permis import Permis
+from .telephone import Telephone
+from .email import Email
 
+@dataclasses.dataclass
 class Client:
-
-    def __init__(self, nom: str, prenom: str, permis: str, telephone: str, email: str, voitureLouer: None):
-        self.nom = nom
-        self.prenom = prenom
-        self.permis = permis
-        self.telephone = telephone
-        self.email = email
-        self.historique_locations = []
-        self.voitureLouer = voitureLouer
-
+    nom: str
+    prenom: str
+    permis: Permis
+    telephone: Telephone
+    email: Email
+    voitureLouer: None
+    historique_locations: list[str] = dataclasses.field(default_factory=list)
 
     def louer_voiture(self, voiture) -> bool:
         """Ajoute une voiture à l'historique des locations si elle est disponible."""

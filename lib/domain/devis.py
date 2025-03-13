@@ -1,9 +1,7 @@
+import dataclasses
 from .vehicule import Vehicule
 
+@dataclasses.dataclass
 class Devis():
     vehicule: Vehicule
-    prix: int
-
-    def __init__(self, vehicule: Vehicule, prix: int):
-        self.vehicule = vehicule
-        self.prix = prix
+    prix: float

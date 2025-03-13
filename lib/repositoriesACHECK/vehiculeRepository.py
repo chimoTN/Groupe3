@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Any
 from datetime import date
-from lib.entities.vehicule import Vehicule
+from ..domain.vehicule import Vehicule
 
 class VehiculeRepository:
     _instance = None

@@ -1,8 +1,9 @@
 import pytest
 
-from ..lib.application.use_cases import ProposerDevisUseCase
+from ..lib.application.use_cases.ProposerDevisUseCase import ProposerDevisUseCase
 from ..lib.application.exceptions import PrixDevisInvalideException, VehiculeIntrouvableException
 from ..lib.domain.vehicule import Vehicule
+from ..lib.domain.immatriculation import Immatriculation
 
 @pytest.fixture
 def devisUseCase():
@@ -10,7 +11,17 @@ def devisUseCase():
 
 @pytest.fixture
 def vehicule():
-    return Vehicule("marque", "modele", 1980, "aa-123-aa", 1000, 50.0, "etat", "voiture")
+    immatriculation = Immatriculation(identifiant="AA-123-AA", departement="AA")
+    return Vehicule(
+        marque="marque",
+        modele="modele",
+        annee=1980,
+        immatriculation=immatriculation,
+        kilometrage=1000,
+        prix_journalier=50.0,
+        etat="etat",
+        typeVehicule="voiture"
+    )
 
 def test_devis_use_case_invalid_price(devisUseCase, vehicule):
     prix = -5
