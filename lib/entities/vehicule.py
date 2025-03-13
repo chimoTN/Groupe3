@@ -1,6 +1,6 @@
 class Vehicule:
 
-    def __init__(self, marque: str, modele: str, annee: int, immatriculation: str, kilometrage: int, prix_journalier: float, etat : str, typeVehicule: str):
+    def __init__(self, marque: str, modele: str, annee: int, immatriculation: str, kilometrage: int, prix_journalier: float, etat : str, typeVehicule: str, id: int | None = None):
         self.marque = marque
         self.modele = modele
         self.annee = annee
@@ -10,6 +10,7 @@ class Vehicule:
         self.disponible = True 
         self.etat = etat
         self.typeVehicule = typeVehicule
+        self.id = id
 
     def louer(self) -> bool:
         """Marque la voiture comme louée si elle est disponible."""

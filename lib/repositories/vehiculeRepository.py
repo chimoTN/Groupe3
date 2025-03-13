@@ -57,14 +57,20 @@ class VehiculeRepository:
         Returns:
             L'ID du véhicule
         """
-        # Vérifier si le véhicule a déjà un ID
-        if not hasattr(vehicule, 'id') or vehicule.id is None:
+        if vehicule.id is None:
             vehicule.id = self._next_id
             self._next_id += 1
-        
-        # Sauvegarder ou mettre à jour le véhicule
         self._vehicules[vehicule.id] = vehicule
         return vehicule.id
+    
+        # Vérifier si le véhicule a déjà un ID
+        # if not hasattr(vehicule, 'id') or vehicule.id is None:
+        #     vehicule.id = self._next_id
+        #     self._next_id += 1
+        
+        # Sauvegarder ou mettre à jour le véhicule
+        # self._vehicules[vehicule.id] = vehicule
+        # return vehicule.id
 
     def delete(self, vehicule_id: int) -> bool:
         """
