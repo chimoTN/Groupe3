@@ -1,52 +1,84 @@
 import unittest
+from unittest.mock import MagicMock
 
-from ..lib.entities.client import Client
-from ..lib.entities.vehicule import Vehicule
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from lib.repositories.clientRepository import ClientRepository
+
+from ..lib.repositories.vehiculeRepository import VehiculeRepository
+from ..lib.use_cases.locationVehicule.restitutionVehicule import RestitutionVehicule
+
 
 class TestRestitutionVoiture(unittest.TestCase):
-
+    
     def setUp(self):
-        """Initialisation des objets avant chaque test."""
-        self.client = Client("Dupont", "Jean", "123456789", "0601020304", "jean.dupont@email.com", None)
-        self.voiture = Vehicule("Peugeot", "208", 2021, "AB-123-CD", 25000, 45.0, "Bon état", "Voiture")
-
-    # Un client rend un véhicule en bon état
-    def test_rendre_vehicule_nickel(self):
-        self.client.louer_voiture(self.voiture)  
-        self.client.retourner_voiture(self.voiture, 100, "Nickel")
-
-        self.assertTrue(self.voiture.disponible)
-        self.assertEqual(self.voiture.kilometrage, 25100)
-        self.assertEqual(self.voiture.etat, "Nickel")
-
-    # Un client rend un véhicule sale
-    def test_rendre_vehicule_sale(self):
-        self.client.louer_voiture(self.voiture)
-        self.client.retourner_voiture(self.voiture, 150, "Sale")
-
-        self.assertTrue(self.voiture.disponible)
-        self.assertEqual(self.voiture.kilometrage, 25150)
-        self.assertEqual(self.voiture.etat, "Sale")
-
-    # Un client rend un véhicule endommagé
-    def test_rendre_vehicule_endomager(self):
-        self.client.louer_voiture(self.voiture)
-        self.client.retourner_voiture(self.voiture, 200, "Endommagé")
-
-        self.assertTrue(self.voiture.disponible)
-        self.assertEqual(self.voiture.kilometrage, 25200)
-        self.assertEqual(self.voiture.etat, "Endommagé")
-
-    # Un client tente de rendre un véhicule qu'il n'a pas loué
-    def test_vehicule_non_rendu(self):
-        autre_voiture = Vehicule("Renault", "Clio", 2020, "BC-234-DE", 30000, 40.0, "Bon état", "Voiture")
+        self.client_repo = MagicMock(spec=ClientRepository)
+        self.vehicule_repo = MagicMock(spec=VehiculeRepository)
         
-        with self.assertLogs("client", level="WARNING") as log:
-            self.client.retourner_voiture(autre_voiture, 50)
-            self.assertIn("n'a pas cette voiture en location", log.output[0])
+        self.client = MagicMock()
+        self.client.id = 1
+        self.client.nom = "Dupont"
+        self.client.prenom = "Jean"
+        self.client.historique_locations = []
+        
+        self.vehicule = MagicMock()
+        self.vehicule.id = 1
+        self.vehicule.marque = "Peugeot"
+        self.vehicule.modele = "208"
+        self.vehicule.immatriculation = "AB-123-CD"
+        self.vehicule.kilometrage = 25000
+        self.vehicule.prix_journalier = 45.0
+        self.vehicule.disponible = False
+        self.vehicule.etat = "Bon"
+        
+        self.client_repo.get_by_id.return_value = self.client
+        self.vehicule_repo.get_by_id.return_value = self.vehicule
+        
+        self.client.historique_locations.append(self.vehicule)
+    
+    def test_restitution_normale(self):
+        RestitutionVehicule(self.client.id, self.vehicule.id, 300, "Propre")
+        self.client.historique_locations.remove.assert_called_with(self.vehicule)
+        self.vehicule.retourner.assert_called_with(300, "Propre")
+    
+    def test_restitution_voiture_sale(self):
+        RestitutionVehicule(self.client.id, self.vehicule.id, 300, "Sale")
+        self.client.historique_locations.remove.assert_called_with(self.vehicule)
+        self.vehicule.retourner.assert_called_with(300, "Sale")
+    
+    def test_restitution_voiture_cassee(self):
+        RestitutionVehicule(self.client.id, self.vehicule.id, 300, "Cassé")
+        self.client.historique_locations.remove.assert_called_with(self.vehicule)
+        self.vehicule.retourner.assert_called_with(300, "Cassé")
+    
+    def test_non_restitution_voiture(self):
+        RestitutionVehicule(self.client.id, self.vehicule.id, 0, "Non Rendu")
+        self.client.historique_locations.remove.assert_not_called()
+        self.vehicule.retourner.assert_not_called()
+    
+    def test_client_inexistant(self):
+        self.client_repo.get_by_id.return_value = None
+        RestitutionVehicule(999, self.vehicule.id, 300, "Propre")
+        self.client_repo.get_by_id.assert_called_with(999)
+    
+    def test_vehicule_inexistant(self):
+        self.vehicule_repo.get_by_id.return_value = None
+        RestitutionVehicule(self.client.id, 999, 300, "Propre")
+        self.vehicule_repo.get_by_id.assert_called_with(999)
+    
+    def test_client_n_a_pas_loue_ce_vehicule(self):
+        autre_client = MagicMock()
+        autre_client.id = 2
+        autre_client.nom = "Martin"
+        autre_client.prenom = "Paul"
+        autre_client.historique_locations = []
+        
+        self.client_repo.get_by_id.return_value = autre_client
+        RestitutionVehicule(autre_client.id, self.vehicule.id, 300, "Propre")
+        autre_client.historique_locations.remove.assert_not_called()
+        self.vehicule.retourner.assert_not_called()
 
-        self.assertTrue(autre_voiture.disponible)
-        self.assertEqual(autre_voiture.kilometrage, 30000)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
