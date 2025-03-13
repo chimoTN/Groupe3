@@ -1,4 +1,4 @@
-from lib.entities.vehicule import Vehicule
+from .vehicule import Vehicule
 
 class Client:
 
