@@ -11,8 +11,8 @@ from ..lib.repositories.vehiculeRepository import VehiculeRepository
 from ..lib.use_cases.locationVehicule.restitutionVehicule import RestitutionVehicule
 
 
-from ..lib.entities.client import Client
-from ..lib.entities.vehicule import Vehicule
+from ..lib.domain.client import Client
+from ..lib.domain.vehicule import Vehicule
 
 class TestRestitutionVoiture(unittest.TestCase):
 

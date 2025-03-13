@@ -2,8 +2,8 @@ from lib.repositories.clientRepository import ClientRepository
 from lib.repositories.vehiculeRepository import VehiculeRepository
 
 from typing import Optional
-from lib.entities.client import Client
-from lib.entities.vehicule import Vehicule
+from ...domain.client import Client
+from ...domain.vehicule import Vehicule
 
 class RestitutionVehicule:
 

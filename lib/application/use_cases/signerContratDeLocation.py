@@ -3,18 +3,18 @@ from datetime import date, timedelta
 from typing import Optional, Tuple, Dict, Any
 
 # Importation des exceptions depuis le fichier séparé
-from lib.exceptions.contrat_location_exceptions import (
+from ..exceptions import (
     ContratLocationError, ClientInexistantError, VehiculeInexistantError,
     AssuranceInexistanteError, VehiculeNonDisponibleError, DateInvalideError,
     EnregistrementContratError
 )
 
 # Importations des entités et repositories
-from lib.entities.contratLocation import ContratLocation
-from lib.repositories.clientRepository import ClientRepository
-from lib.repositories.vehiculeRepository import VehiculeRepository
-from lib.repositories.assuranceRepository import AssuranceRepository
-from lib.repositories.contratRepository import ContratRepository
+from ...domain.contratLocation import ContratLocation
+from ...application.ClientRepositoryPort import ClientRepository
+from ...application.VehiculeRepositoryPort import VehiculeRepository
+from ...application.AssuranceRepositoryPort import AssuranceRepository
+from ...application.ContratRepositoryPort import ContratRepository
 
 
 class SignerContratDeLocation:

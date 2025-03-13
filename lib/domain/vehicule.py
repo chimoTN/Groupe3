@@ -42,12 +42,3 @@ class Vehicule:
               f"Kilométrage: {self.kilometrage} km\n"
               f"Prix journalier: {self.prix_journalier} €/jour\n"
               f"Statut: {statut}\n")
-
-
-# Exemple d'utilisation
-# voiture1 = Vehicule("Peugeot", "208", 2021, "AB-123-CD", 25000, 45.0, "Voiture")
-# voiture1.afficher_info()
-# voiture1.louer()
-# voiture1.afficher_info()
-# voiture1.retourner(300)
-# voiture1.afficher_info()

@@ -1,25 +1,19 @@
-import sys
-import os
 from pathlib import Path
 import pytest
 from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
-# Ajouter le chemin racine au PYTHONPATH
-root_dir = str(Path(__file__).parent.parent.absolute())
-sys.path.insert(0, root_dir)
-print(f"Added {root_dir} to Python path")
-
 # Importer le module signerContratDeLocation et les exceptions
-from lib.use_cases.locationVehicule.signerContratDeLocation import SignerContratDeLocation
-from lib.exceptions.contrat_location_exceptions import (
-    ContratLocationError,
-    ClientInexistantError,
-    VehiculeInexistantError,
-    AssuranceInexistanteError,
-    VehiculeNonDisponibleError,
-    DateInvalideError,
-    EnregistrementContratError
+from ..lib.application.ContratRepositoryPort import ContratRepositoryPort
+from ..lib.application.exceptions import (
+    AssuranceInexistanteException,
+    ClientInexistantException,
+    ContratLocationException,
+    DateInvalideException,
+    DevisIntrouvable,
+    EnregistrementContratException,
+    VehiculeInexistantException,
+    VehiculeNonDisponibleException
 )
 
 
@@ -112,7 +106,7 @@ def test_client_inexistant(mock_repositories, future_date):
     mock_repositories['client'].get_by_id.return_value = None
     
     # Vérifier que l'exception est levée
-    with pytest.raises(ClientInexistantError), patch('builtins.print'):
+    with pytest.raises(ClientInexistantException), patch('builtins.print'):
         SignerContratDeLocation.main(
             client_id=-999,  # ID de client inexistant
             vehicule_id=2,
@@ -128,7 +122,7 @@ def test_vehicule_inexistant(mock_repositories, future_date):
     mock_repositories['vehicule'].get_by_id.return_value = None
     
     # Vérifier que l'exception est levée
-    with pytest.raises(VehiculeInexistantError), patch('builtins.print'):
+    with pytest.raises(VehiculeInexistantException), patch('builtins.print'):
         SignerContratDeLocation.main(
             client_id=1,
             vehicule_id=-999,  # ID de véhicule inexistant
@@ -144,7 +138,7 @@ def test_assurance_inexistante(mock_repositories, future_date):
     mock_repositories['assurance'].get_by_id.return_value = None
     
     # Vérifier que l'exception est levée
-    with pytest.raises(AssuranceInexistanteError), patch('builtins.print'):
+    with pytest.raises(AssuranceInexistanteException), patch('builtins.print'):
         SignerContratDeLocation.main(
             client_id=1,
             vehicule_id=2,
@@ -160,7 +154,7 @@ def test_vehicule_non_disponible(mock_repositories, future_date):
     mock_repositories['vehicule'].is_available_between.return_value = False
     
     # Vérifier que l'exception est levée
-    with pytest.raises(VehiculeNonDisponibleError), patch('builtins.print'):
+    with pytest.raises(VehiculeNonDisponibleException), patch('builtins.print'):
         SignerContratDeLocation.main(
             client_id=1,
             vehicule_id=2,
@@ -176,7 +170,7 @@ def test_date_debut_passee(mock_repositories):
     past_date = date.today() - timedelta(days=1)
     
     # Vérifier que l'exception est levée
-    with pytest.raises(DateInvalideError), patch('builtins.print'):
+    with pytest.raises(DateInvalideException), patch('builtins.print'):
         SignerContratDeLocation.main(
             client_id=1,
             vehicule_id=2,
@@ -189,7 +183,7 @@ def test_date_debut_passee(mock_repositories):
 def test_duree_negative(mock_repositories, future_date):
     """Test avec une durée négative"""
     # Vérifier que l'exception est levée
-    with pytest.raises(DateInvalideError), patch('builtins.print'):
+    with pytest.raises(DateInvalideException), patch('builtins.print'):
         SignerContratDeLocation.main(
             client_id=1,
             vehicule_id=2,
@@ -224,7 +218,7 @@ def test_erreur_enregistrement_contrat(mock_repositories, future_date):
     mock_repositories['contrat'].save.side_effect = Exception("Erreur de base de données")
     
     # Vérifier que l'exception est levée
-    with pytest.raises(EnregistrementContratError), patch('builtins.print'):
+    with pytest.raises(EnregistrementContratException), patch('builtins.print'):
         SignerContratDeLocation.main(
             client_id=1,
             vehicule_id=2,
@@ -289,7 +283,7 @@ def test_exception_inattendue_convertie(mock_repositories, future_date):
     mock_repositories['client'].get_by_id.side_effect = ValueError("Erreur inattendue")
     
     # Vérifier que l'exception est convertie en ContratLocationError
-    with pytest.raises(ContratLocationError), patch('builtins.print'):
+    with pytest.raises(ContratLocationException), patch('builtins.print'):
         SignerContratDeLocation.main(
             client_id=1,
             vehicule_id=2,

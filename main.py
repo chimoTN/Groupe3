@@ -1,7 +1,5 @@
 import sys
 
-import lib.exemple
-
 def main(args):
     print('Hello World!')
     print(args)

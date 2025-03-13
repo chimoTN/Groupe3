@@ -1,7 +1,8 @@
 import pytest
 
-from ..lib.use_cases.proposerDevis import ProposerDevisUseCase, InvalidDevisPriceException
-from ..lib.entities.vehicule import Vehicule
+from ..lib.application.use_cases import ProposerDevisUseCase
+from ..lib.application.exceptions import PrixDevisInvalideException, VehiculeIntrouvableException
+from ..lib.domain.vehicule import Vehicule
 
 @pytest.fixture
 def devisUseCase():
@@ -13,13 +14,13 @@ def vehicule():
 
 def test_devis_use_case_invalid_price(devisUseCase, vehicule):
     prix = -5
-    with pytest.raises(InvalidDevisPriceException):
+    with pytest.raises(PrixDevisInvalideException):
         devisUseCase.proposerDevis(vehicule, prix)
 
 def test_devis_use_case_invalid_vehicule(devisUseCase):
     vehicule = None
     prix = 10000
-    with pytest.raises(Exception):
+    with pytest.raises(VehiculeIntrouvableException):
         devisUseCase.proposerDevis(vehicule, prix)
 
 def test_devis_valid(devisUseCase, vehicule):
