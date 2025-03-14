@@ -23,7 +23,6 @@ class Vehicule:
             print(f"La voiture {self.marque} {self.modele} ({self.immatriculation}) est déjà louée.")
             return False
 
-
     def retourner(self, nouveaux_km: int, nouvel_etat: str) -> None:
         """Retourne la voiture et met à jour le kilométrage."""
         if not self.disponible:
@@ -34,7 +33,6 @@ class Vehicule:
         else:
             print(f"La voiture {self.marque} {self.modele} ({self.immatriculation}) a été retournée avec {nouveaux_km} km de plus et un état '{self.etat}'.")
 
-
     def afficher_info(self) -> None:
         """Affiche les informations de la voiture."""
         statut = "Disponible" if self.disponible else "Louée"
@@ -43,3 +41,16 @@ class Vehicule:
               f"Kilométrage: {self.kilometrage} km\n"
               f"Prix journalier: {self.prix_journalier} €/jour\n"
               f"Statut: {statut}\n")
+
+    def to_dict(self):
+        return {
+            'marque': self.marque,
+            'modele': self.modele,
+            'annee': self.annee,
+            'immatriculation': str(self.immatriculation),
+            'kilometrage': self.kilometrage,
+            'prix_journalier': self.prix_journalier,
+            'etat': self.etat,
+            'typeVehicule': self.typeVehicule,
+            'disponible': self.disponible
+        }

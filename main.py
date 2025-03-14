@@ -1,9 +1,7 @@
 import sys
+from lib.application.controllers import create_app
 
-def main(args):
-    print('Hello World!')
-    print(args)
-    pass
+app = create_app()
 
 if __name__ == '__main__':
-    main(sys.argv)
+    app.run(debug=True)
