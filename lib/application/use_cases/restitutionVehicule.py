@@ -1,8 +1,8 @@
 from typing import Optional, List, Tuple, Dict, Any
 
-from lib.repositories.clientRepository import ClientRepository
-from lib.repositories.vehiculeRepository import VehiculeRepository
-from lib.repositories.contratRepository import ContratRepository
+from lib.infrastructure.InMemoryClientRepository import InMemoryClientRepository
+from lib.infrastructure.InMemoryVehiculeRepository import InMemoryVehiculeRepository
+from lib.infrastructure.InMemoryContratRepository import InMemoryContratRepository
 
 from lib.domain.contratLocation import ContratLocation
 from lib.domain.client import Client
@@ -17,9 +17,9 @@ class RestitutionVehicule:
     """
 
     def __init__(self,
-                 client_repository: ClientRepository,
-                 vehicule_repository: VehiculeRepository,
-                 contrat_repository: ContratRepository):
+                 client_repository: InMemoryClientRepository,
+                 vehicule_repository: InMemoryVehiculeRepository,
+                 contrat_repository: InMemoryContratRepository):
         self.client_repository = client_repository
         self.vehicule_repository = vehicule_repository
         self.contrat_repository = contrat_repository

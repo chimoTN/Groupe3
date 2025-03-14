@@ -7,8 +7,8 @@ from ..lib.domain.client import Client
 from ..lib.domain.vehicule import Vehicule
 from ..lib.domain.contratLocation import ContratLocation
 from ..lib.repositories.contratRepository import ContratRepository
-from ..lib.repositories.clientRepository import ClientRepository
-from ..lib.repositories.vehiculeRepository import VehiculeRepository
+from ..lib.application.ClientRepositoryPort import ClientRepositoryPort
+from ..lib.application.VehiculeRepositoryPort import VehiculeRepositoryPort
 from ..lib.application.use_cases.restitutionVehicule import RestitutionVehicule
 
 class TestRestitutionVehicule(unittest.TestCase):
@@ -19,8 +19,8 @@ class TestRestitutionVehicule(unittest.TestCase):
         Création des mocks et initialisation du use case.
         """
 
-        self.mock_client_repo = MagicMock(spec=ClientRepository)
-        self.mock_vehicule_repo = MagicMock(spec=VehiculeRepository)
+        self.mock_client_repo = MagicMock(spec=ClientRepositoryPort)
+        self.mock_vehicule_repo = MagicMock(spec=VehiculeRepositoryPort)
         self.mock_contrat_repo = MagicMock(spec=ContratRepository)
 
         self.use_case = RestitutionVehicule(
@@ -61,7 +61,7 @@ class TestRestitutionVehicule(unittest.TestCase):
         Test de restitution sans nouveaux défauts.
         La caution ne doit pas être retenue.
         """
-        self.contrat.enregistrerRestitution.return_value = Decimal('0.00')
+        self.contrat.enregistrerRestitution.return_value = 0.0
         
         vehicule_restitue, caution_retenue = self.use_case.restituer_vehicule(
             client_id=1,
@@ -101,7 +101,7 @@ class TestRestitutionVehicule(unittest.TestCase):
         self.assertEqual(caution_retenue, 200.0)
         
         self.contrat.enregistrerRestitution.assert_called_once()
-        self.vehicule.retourner.assert_called_once_with(300, "Endommagé", nouveaux_defauts)
+        self.vehicule.retourner.assert_called_once_with(300, caution., nouveaux_defauts)
         self.mock_client_repo.save.assert_called_once_with(self.client)
         self.mock_vehicule_repo.save.assert_called_once_with(self.vehicule)
         self.mock_contrat_repo.save.assert_called_once_with(self.contrat)
@@ -212,6 +212,7 @@ class TestRestitutionVehicule(unittest.TestCase):
                 etat_restitution="Nickel"
             )
             self.fail("Une exception aurait dû être levée")
+            
         except ValueError:
             pass
         

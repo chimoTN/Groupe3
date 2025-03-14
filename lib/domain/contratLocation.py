@@ -1,125 +1,81 @@
-from datetime import date
-from typing import Union, Any, Optional
-from typing import List, Optional, Set, Dict, Any, Union
+from datetime import date, timedelta
+from typing import Optional, List
 import dataclasses
 
+from .etat_vehicule import EtatVehicule
 from .client import Client
 from .vehicule import Vehicule
 from .assurance import Assurance
 
 @dataclasses.dataclass
 class ContratLocation:
+    # Attributs obligatoires
+    client: Client
+    vehicule: Vehicule
     dateDebut: date
     duree: int
     caution: float
     cout: float
-    etatInitialDuVehicule: float
-    client: Client
-    vehicule: Vehicule
-    assurance: Optional[Assurance]
+    etatInitialDuVehicule: EtatVehicule
     
-    def getDateDebut(self) -> date:
-        return self._dateDebut
+    # Attributs optionnels avec valeurs par défaut
+    defautsInitiaux: List[str] = dataclasses.field(default_factory=list)
+    assurance: Optional[Assurance] = None
+    est_cloture: bool = False
+    date_restitution: Optional[date] = None
+    km_retour: Optional[int] = None
+    defauts_restitution: List[str] = dataclasses.field(default_factory=list)
+    caution_retenue: float = 0.0
+    id: Optional[int] = None
     
-    def getDuree(self) -> int:
-        return self._duree
-    
-    def getCaution(self) -> float:
-        return self._caution
-    
-    def getCout(self) -> float:
-        return self._cout
-    
-    def getClient(self) -> Client:
-        return self._client
-    
-    def getVehicule(self) -> Vehicule:
-        return self._vehicule
-    
-    def getAssurance(self) -> Optional[Assurance]:
-        return self._assurance
-    
-    def getDefautsInitiaux(self) -> List[str]:
-        return self._defauts_initiaux.copy()  
-    
-    def getDefautsRestitution(self) -> List[str]:
-        return self._defauts_restitution.copy() 
-    
-    def getDateRestitution(self) -> Optional[date]:
-        return self._date_restitution
-    
-    def getKmDepart(self) -> int:
-        return self._km_depart
-    
-    def getKmRetour(self) -> Optional[int]:
-        return self._km_retour
-    
-    def getCautionRetenue(self) -> Decimal:
-        return self._caution_retenue
-    
-    def estCloture(self) -> bool:
-        return self._est_cloture
-    
-    def setId(self, id: int) -> None:
-        self._id = id
-    
-   
-    def setDateDebut(self, dateDebut: date) -> None:
-        if self._est_cloture:
-            raise ValueError("Impossible de modifier un contrat clôturé")
-        self._dateDebut = dateDebut
-    
-    def setDuree(self, duree: int) -> None:
-        if self._est_cloture:
-            raise ValueError("Impossible de modifier un contrat clôturé")
-        if duree <= 0:
+    def __post_init__(self):
+        """Initialisation après la création de l'instance"""
+        # Vérification des valeurs initiales
+        if self.duree <= 0:
             raise ValueError("La durée du contrat doit être positive")
-        self._duree = duree
-    
-    def setCaution(self, caution: float) -> None:
-        if self._est_cloture:
-            raise ValueError("Impossible de modifier un contrat clôturé")
-        if caution < 0:
+        if self.caution < 0:
             raise ValueError("Le montant de la caution ne peut pas être négatif")
-        self._caution = caution
-    
-    def setCout(self, cout: float) -> None:
-        if self._est_cloture:
-            raise ValueError("Impossible de modifier un contrat clôturé")
-        if cout < 0:
+        if self.cout < 0:
             raise ValueError("Le coût de location ne peut pas être négatif")
-        self._cout = cout
+        
+        # Récupération du kilométrage de départ
+        self.km_depart = self.vehicule.kilometrage
+        
+        # Création d'une copie de la liste pour éviter le partage de référence
+        self.defautsInitiaux = self.defautsInitiaux.copy()
     
-    def setClient(self, client: Client) -> None:
-        if self._est_cloture:
-            raise ValueError("Impossible de modifier un contrat clôturé")
-        self._client = client
+    def __setattr__(self, name, value):
+        """Méthode appelée lors de l'assignation d'un attribut"""
+        # Vérification pour les attributs qui nécessitent contrôle
+        if name in ['dateDebut', 'duree', 'caution', 'cout', 'client', 'vehicule', 'assurance', 'defautsInitiaux']:
+            if hasattr(self, 'est_cloture') and self.est_cloture:
+                raise ValueError(f"Impossible de modifier {name} sur un contrat clôturé")
+            
+            # Vérifications spécifiques selon l'attribut
+            if name == 'duree' and value <= 0:
+                raise ValueError("La durée du contrat doit être positive")
+            elif name == 'caution' and value < 0:
+                raise ValueError("Le montant de la caution ne peut pas être négatif")
+            elif name == 'cout' and value < 0:
+                raise ValueError("Le coût de location ne peut pas être négatif")
+            elif name == 'defautsInitiaux' and isinstance(value, list):
+                # Créer une copie pour éviter les références partagées
+                value = value.copy()
+            elif name == 'vehicule':
+                # Mettre à jour km_depart si le véhicule change
+                object.__setattr__(self, 'km_depart', value.kilometrage)
+                
+        # Assignation de la valeur
+        object.__setattr__(self, name, value)
     
-    def setVehicule(self, vehicule: Vehicule) -> None:
-        if self._est_cloture:
-            raise ValueError("Impossible de modifier un contrat clôturé")
-        self._vehicule = vehicule
-        self._km_depart = vehicule.kilometrage
-    
-    def setAssurance(self, assurance: Optional[Assurance]) -> None:
-        if self._est_cloture:
-            raise ValueError("Impossible de modifier un contrat clôturé")
-        self._assurance = assurance
-    
-    def setDefautsInitiaux(self, defauts: List[str]) -> None:
-        if self._est_cloture:
-            raise ValueError("Impossible de modifier un contrat clôturé")
-        self._defauts_initiaux = defauts.copy()
-    
-  
     def calculerDateFinPrevue(self) -> date:
         """Calcule la date de fin prévue du contrat"""
-        return self._dateDebut + timedelta(days=self._duree)
+        return self.dateDebut + timedelta(days=self.duree)
     
     def enregistrerRestitution(self, 
                               date_restitution: date, 
                               km_retour: int,
-                              defauts_restitution: List[str]) -> Decimal:
+                              defauts_restitution: List[str]) -> float:
         """
         Enregistre la restitution du véhicule et calcule les pénalités éventuelles
         
@@ -134,30 +90,31 @@ class ContratLocation:
         Raises:
             ValueError: Si le contrat est déjà clôturé ou si les paramètres sont invalides
         """
-        if self._est_cloture:
+        if self.est_cloture:
             raise ValueError("Ce contrat est déjà clôturé")
         
-        if date_restitution < self._dateDebut:
+        if date_restitution < self.dateDebut:
             raise ValueError("La date de restitution ne peut pas être antérieure à la date de début")
         
-        if km_retour < self._km_depart:
+        if km_retour < self.km_depart:
             raise ValueError("Le kilométrage de retour ne peut pas être inférieur au kilométrage de départ")
         
-       
-        self._date_restitution = date_restitution
-        self._km_retour = km_retour
-        self._defauts_restitution = defauts_restitution.copy()
+        # Bypass la vérification de __setattr__ car le contrat n'est pas encore clôturé
+        object.__setattr__(self, 'date_restitution', date_restitution)
+        object.__setattr__(self, 'km_retour', km_retour)
+        object.__setattr__(self, 'defauts_restitution', defauts_restitution.copy())
         
-        nouveaux_defauts = [defaut for defaut in defauts_restitution if defaut not in self._defauts_initiaux]
+        nouveaux_defauts = self.verifierNouveauxDefauts(defauts_restitution)
         
         caution_retenue = self._calculerCautionRetenue(nouveaux_defauts)
-        self._caution_retenue = caution_retenue
+        object.__setattr__(self, 'caution_retenue', caution_retenue)
         
-        self._est_cloture = True
+        # Marquer le contrat comme clôturé en dernier
+        object.__setattr__(self, 'est_cloture', True)
         
         return caution_retenue
     
-    def _calculerCautionRetenue(self, nouveaux_defauts: List[str]) -> Decimal:
+    def _calculerCautionRetenue(self, nouveaux_defauts: List[str]) -> float:
         """
         Calcule le montant de la caution à retenir en fonction des nouveaux défauts
         
@@ -168,15 +125,15 @@ class ContratLocation:
             Montant de la caution à retenir
         """
         if not nouveaux_defauts:
-            return Decimal('0.00')
+            return 0.0
         
-        taux_penalite = Decimal('0.10')  
-        if self._assurance:
-            taux_penalite = Decimal('0.05')  
+        taux_penalite = 0.1
+        if self.assurance:
+            taux_penalite = 0.05  
         
-        montant = Decimal(str(self._caution)) * taux_penalite * len(nouveaux_defauts)
+        montant = float(str(self.caution)) * taux_penalite * len(nouveaux_defauts)
         
-        return min(montant, Decimal(str(self._caution)))
+        return min(montant, float(str(self.caution)))
     
     def verifierNouveauxDefauts(self, defauts_restitution: List[str]) -> List[str]:
         """
@@ -188,7 +145,7 @@ class ContratLocation:
         Returns:
             Liste des nouveaux défauts
         """
-        return [defaut for defaut in defauts_restitution if defaut not in self._defauts_initiaux]
+        return [defaut for defaut in defauts_restitution if defaut not in self.defautsInitiaux]
     
     def estEnRetard(self, date_reference: Optional[date] = None) -> bool:
         """
@@ -204,23 +161,32 @@ class ContratLocation:
             date_reference = date.today()
             
         date_fin_prevue = self.calculerDateFinPrevue()
-        return date_reference > date_fin_prevue and not self._est_cloture
+        return date_reference > date_fin_prevue and not self.est_cloture
+    
+    def est_actif(self) -> bool:
+        """Indique si le contrat est actif (non clôturé)"""
+        return not self.est_cloture
     
     def __str__(self) -> str:
         """Représentation textuelle du contrat de location"""
-        assurance_info = f"  Assurance: {self._assurance}\n" if self._assurance else "  Pas d'assurance\n"
+        assurance_info = f"  Assurance: {self.assurance}\n" if self.assurance else "  Pas d'assurance\n"
         
-        defauts_init = ", ".join(self._defauts_initiaux) if self._defauts_initiaux else "Aucun"
-        etat_cloture = "Clôturé" if self._est_cloture else "En cours"
+        defauts_init = ", ".join(self.defautsInitiaux) if self.defautsInitiaux else "Aucun"
+        etat_cloture = "Clôturé" if self.est_cloture else "En cours"
         
-        return f"Contrat de location {self._id}:\n" \
-               f"  Date de début: {self._dateDebut}\n" \
-               f"  Durée: {self._duree} jours\n" \
+        id_str = f"{self.id}" if self.id is not None else "Non assigné"
+        
+        return f"Contrat de location {id_str}:\n" \
+               f"  Date de début: {self.dateDebut}\n" \
+               f"  Durée: {self.duree} jours\n" \
                f"  Date de fin prévue: {self.calculerDateFinPrevue()}\n" \
-               f"  Caution: {self._caution} €\n" \
-               f"  Coût: {self._cout} €\n" \
+               f"  Caution: {self.caution} €\n" \
+               f"  Coût: {self.cout} €\n" \
                f"  État: {etat_cloture}\n" \
                f"  Défauts initiaux: {defauts_init}\n" \
                f"{assurance_info}" \
-               f"  Client: {self._client}\n" \
-               f"  Véhicule: {self._vehicule}"
+               f"  Client: {self.client}\n" \
+               f"  Véhicule: {self.vehicule}"
+
+# Alias pour compatibilité
+Contrat = ContratLocation

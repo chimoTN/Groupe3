@@ -9,16 +9,17 @@ from lib.application.exceptions import (
     AssuranceInexistanteException, ClientInexistantException, ContratLocationException, DateInvalideException,
     EnregistrementContratException, VehiculeInexistantException, VehiculeNonDisponibleException, DevisIntrouvable, PrixDevisInvalideException, VehiculeIntrouvableException
 )
+from lib.domain.etat_vehicule import EtatVehicule
 
 @contextmanager
 def patch_singleton_repositories(mock_repos):
     """
     Gestionnaire de contexte pour patcher les repositories singleton
     """
-    with patch('lib.repositories.clientRepository.ClientRepository._instance', mock_repos['client']), \
-         patch('lib.repositories.vehiculeRepository.VehiculeRepository._instance', mock_repos['vehicule']), \
-         patch('lib.repositories.assuranceRepository.AssuranceRepository._instance', mock_repos['assurance']), \
-         patch('lib.repositories.contratRepository.ContratRepository._instance', mock_repos['contrat']), \
+    with patch('lib.infrastructure.InMemoryClientRepository.InMemoryClientRepository._instance', mock_repos['client']), \
+         patch('lib.infrastructure.InMemoryVehiculeRepository.InMemoryVehiculeRepository._instance', mock_repos['vehicule']), \
+         patch('lib.infrastructure.InMemoryAssuranceRepository.InMemoryAssuranceRepository._instance', mock_repos['assurance']), \
+         patch('lib.infrastructure.InMemoryContratRepository.InMemoryContratRepository._instance', mock_repos['contrat']), \
          patch('builtins.print'):
         yield
 
@@ -30,25 +31,29 @@ def mock_repositories():
     assurance_repo_mock = MagicMock()
     contrat_repo_mock = MagicMock()
     
-    client_repo_mock.get_by_id.return_value = MagicMock(
-        getNom=lambda: "Doe", 
-        getPrenom=lambda: "John",
-        id=1
-    )
+    # Utilisation d'attributs au lieu de méthodes pour la nouvelle implémentation
+    client_mock = MagicMock()
+    client_mock.nom = "Doe" 
+    client_mock.prenom = "John"
+    client_mock.id = 1
+    client_repo_mock.get_by_id.return_value = client_mock
     
-    vehicule_repo_mock.get_by_id.return_value = MagicMock(
-        getMarque=lambda: "Peugeot", 
-        getModele=lambda: "208",
-        id=2
-    )
+    vehicule_mock = MagicMock()
+    vehicule_mock.marque = "Peugeot"
+    vehicule_mock.modele = "208"
+    vehicule_mock.id = 2
+    vehicule_mock.etat = EtatVehicule.BON
+    vehicule_mock.kilometrage = 10000
+    vehicule_repo_mock.get_by_id.return_value = vehicule_mock
+    
     vehicule_repo_mock.is_available_between.return_value = True
     vehicule_repo_mock.calculate_rental_cost.return_value = Decimal('350.0')
     
-    assurance_repo_mock.get_by_id.return_value = MagicMock(
-        getNom=lambda: "Assurance Premium", 
-        getTarif=lambda: Decimal('10.0'), 
-        id=3
-    )
+    assurance_mock = MagicMock()
+    assurance_mock.nom = "Assurance Premium"
+    assurance_mock.tarif = Decimal('10.0')
+    assurance_mock.id = 3
+    assurance_repo_mock.get_by_id.return_value = assurance_mock
     
     contrat_repo_mock.save.return_value = 1 
     
@@ -197,11 +202,12 @@ def test_calcul_cout_avec_assurance(mock_repositories, future_date):
     cout_total = vehicule_cout_total + assurance_cout_total
     
     mock_repositories['vehicule'].calculate_rental_cost.return_value = vehicule_cout_total
-    mock_repositories['assurance'].get_by_id.return_value = MagicMock(
-        getNom=lambda: "Assurance Premium",
-        getTarif=lambda: assurance_tarif,
-        id=3
-    )
+    
+    assurance_mock = MagicMock()
+    assurance_mock.nom = "Assurance Premium"
+    assurance_mock.tarif = assurance_tarif
+    assurance_mock.id = 3
+    mock_repositories['assurance'].get_by_id.return_value = assurance_mock
     
     with patch_singleton_repositories(mock_repositories):
         contrat = SignerContratDeLocation.main(
@@ -212,8 +218,8 @@ def test_calcul_cout_avec_assurance(mock_repositories, future_date):
             duree=duree
         )
         
-
-        assert contrat.getCout() == cout_total
+        # Accès direct à l'attribut cout au lieu de getCout()
+        assert contrat.cout == cout_total
 
 def test_calcul_cout_sans_assurance(mock_repositories, future_date):
     """Test que le coût est correctement calculé sans assurance"""
@@ -222,7 +228,7 @@ def test_calcul_cout_sans_assurance(mock_repositories, future_date):
     duree = 7
     vehicule_cout_total = vehicule_tarif * duree
     
-#     mock_repositories['vehicule'].calculate_rental_cost.return_value = vehicule_cout_total
+    mock_repositories['vehicule'].calculate_rental_cost.return_value = vehicule_cout_total
     
     with patch_singleton_repositories(mock_repositories):
         contrat = SignerContratDeLocation.main(
@@ -233,8 +239,8 @@ def test_calcul_cout_sans_assurance(mock_repositories, future_date):
             duree=duree
         )
         
-
-        assert contrat.getCout() == vehicule_cout_total
+        # Accès direct à l'attribut cout au lieu de getCout()
+        assert contrat.cout == vehicule_cout_total
 
 def test_avec_defauts_initiaux(mock_repositories, future_date):
     """Test avec des défauts initiaux spécifiés"""
@@ -250,4 +256,5 @@ def test_avec_defauts_initiaux(mock_repositories, future_date):
             defauts_initiaux=defauts
         )
         
-        assert contrat.getDefautsInitiaux() == defauts
+        # Accès direct à l'attribut defautsInitiaux au lieu de getDefautsInitiaux()
+        assert contrat.defautsInitiaux == defauts

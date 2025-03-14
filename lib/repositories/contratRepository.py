@@ -1,9 +1,9 @@
 from typing import Optional, List, Dict, Any, Union
 from datetime import date, datetime, timedelta
-from lib.entities.client import Client
-from lib.entities.contratLocation import ContratLocation
-from lib.entities.vehicule import Vehicule
-from lib.entities.assurance import Assurance
+from lib.domain.client import Client
+from lib.domain.contratLocation import ContratLocation
+from lib.domain.vehicule import Vehicule
+from lib.domain.assurance import Assurance
 
 class Contrat:
     """
