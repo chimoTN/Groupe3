@@ -1,9 +1,9 @@
 from flask import Blueprint, request, jsonify
-from lib.application.VehiculeRepositoryPort import VehiculeRepositoryPort
-from lib.domain.vehicule import Vehicule
 from datetime import date
 
-from lib.infrastructure.InMemoryVehiculeRepository import InMemoryVehiculeRepository
+from ..VehiculeRepositoryPort import VehiculeRepositoryPort
+
+from ...infrastructure.InMemoryVehiculeRepository import InMemoryVehiculeRepository
 
 vehicule_bp = Blueprint('vehicule_bp', __name__)
 

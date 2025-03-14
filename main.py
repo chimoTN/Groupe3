@@ -1,5 +1,5 @@
 import sys
-from lib.application.controllers import create_app
+from .lib.application.controllers import create_app
 
 app = create_app()
 

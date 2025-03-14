@@ -1,7 +1,7 @@
 import pytest
 from flask import Flask, jsonify
-from lib.application.controllers.VehiculeController import vehicule_bp, VehiculeController
-from lib.infrastructure.InMemoryVehiculeRepository import InMemoryVehiculeRepository
+from ..lib.application.controllers.VehiculeController import vehicule_bp, VehiculeController
+from ..lib.infrastructure.InMemoryVehiculeRepository import InMemoryVehiculeRepository
 
 @pytest.fixture
 def app():
