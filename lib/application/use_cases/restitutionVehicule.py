@@ -1,94 +1,94 @@
-from ..ClientRepositoryPort import ClientRepositoryPort
-from ..VehiculeRepositoryPort import VehiculeRepositoryPort
+from typing import Optional, List, Tuple, Dict, Any
 
-from typing import Optional
-from ...domain.vehicule import Vehicule
+from lib.repositories.clientRepository import ClientRepository
+from lib.repositories.vehiculeRepository import VehiculeRepository
+from lib.repositories.contratRepository import ContratRepository
+
+from lib.domain.contratLocation import ContratLocation
+from lib.domain.client import Client
+from lib.domain.vehicule import Vehicule
+
 
 class RestitutionVehicule:
-
     """
     Cas d'usage permettant la restitution d'un véhicule par un client,
-    avec mise à jour de l'état selon plusieurs scénarios :
-      - nickel
-      - sale
-      - endommagé
-      - volé
+    avec vérification de l'état par rapport à celui de départ et calcul
+    des pénalités éventuelles.
     """
 
     def __init__(self,
-                 client_repository: ClientRepositoryPort,
-                 vehicule_repository: VehiculeRepositoryPort):
+                 client_repository: ClientRepository,
+                 vehicule_repository: VehiculeRepository,
+                 contrat_repository: ContratRepository):
         self.client_repository = client_repository
         self.vehicule_repository = vehicule_repository
+        self.contrat_repository = contrat_repository
 
     def restituer_vehicule(self,
-                           client_id: int,
-                           vehicule_id: int,
-                           km_parcourus: int,
-                           etat_restitution: str) -> Optional[Vehicule]:
+                       client_id: int,
+                       vehicule_id: int,
+                       km_parcourus: int,
+                       etat_restitution: str,
+                       defauts_restitution: Optional[List[str]] = None) -> Tuple[Optional[Vehicule], float]:
         """
         Permet de gérer la restitution d'un véhicule par un client.
 
-        :param client_id: L'ID du client qui retourne le véhicule
-        :param vehicule_id: L'ID du véhicule retourné
-        :param km_parcourus: Le nombre de kilomètres effectués depuis la location
-        :param etat_restitution: Valeur parmi ("nickel", "sale", "endommagé", "volé")
-        :return: L'objet Vehicule mis à jour, ou None s'il y a une erreur
+        Args:
+            client_id: L'ID du client qui retourne le véhicule
+            vehicule_id: L'ID du véhicule retourné
+            km_parcourus: Le nombre de kilomètres effectués depuis la location
+            etat_restitution: L'état général du véhicule ("Nickel", "Sale", "Endommagé", "Volé")
+            defauts_restitution: Liste détaillée des défauts constatés à la restitution
+
+        Returns:
+            Tuple contenant:
+                - L'objet Vehicule mis à jour, ou None s'il y a une erreur
+                - Le montant de la caution retenue (0 si pas de problème)
         """
-
-        # 1. Récupérer le client et le véhicule via les repositories
-        client = self.client_repository.get_by_id(client_id)
-        vehicule = self.vehicule_repository.get_by_id(vehicule_id)
-
-        if not client or not vehicule:
-            print("Restitution échouée : client ou véhicule introuvable.")
-            return None
-
-        # 2. Vérifier que le client a bien loué ce véhicule
-        #    (i.e. qu'il se trouve dans historique_locations)
-        if vehicule not in client.historique_locations:
-            print("Restitution échouée : ce véhicule n'est pas loué par ce client.")
-            return None
+        try:
             
+            etat_restitution = etat_restitution.capitalize()
+            defauts_restitution = defauts_restitution or []
 
-        # 3. Mettre à jour l'état du véhicule selon l’état constaté au retour
-        #    On imagine que l’attribut `etat` du véhicule peut prendre des valeurs
-        #    comme "Nickel", "Sale", "Endommagé", "Volé", etc.
-        #    À vous d’adapter la logique métier si nécessaire.
+            client = self.client_repository.get_by_id(client_id)
+            vehicule = self.vehicule_repository.get_by_id(vehicule_id)
 
-        # Normalisation basique de la saisie : on met tout en minuscule
-        etat_restitution = etat_restitution.lower()
+            if not client or not vehicule:
+                print("Restitution échouée : client ou véhicule introuvable.")
+                return None, 0.0
 
-        if etat_restitution == "nickel":
-            vehicule.etat = "Nickel"
-        elif etat_restitution == "sale":
-            vehicule.etat = "Sale"
-        elif etat_restitution == "endommagé":
-            vehicule.etat = "Endommagé"
-        elif etat_restitution == "volé":
-            vehicule.etat = "Volé"
-            # Exemple supplémentaire : si c'est volé, on peut imaginer un traitement
-            # spécifique (signalement, statut particulier, etc.)
-            # vehicule.disponible = False  # Par exemple, un véhicule volé n’est plus dispo
-        else:
-            print(f"État de restitution non reconnu : {etat_restitution}")
-            return None
+            if vehicule not in client.historique_locations:
+                print("Restitution échouée : ce véhicule n'est pas loué par ce client.")
+                return None, 0.0
 
-        # 4. Mettre à jour le kilométrage du véhicule
-        vehicule.kilometrage += km_parcourus
+            contrat = self.contrat_repository.trouver_contrat_actif(client_id, vehicule_id)
+            if not contrat:
+                print("Restitution échouée : aucun contrat actif trouvé pour ce client et ce véhicule.")
+                return None, 0.0
 
-        # 5. Rendre le véhicule de nouveau disponible, sauf si volé
-        if vehicule.etat != "Volé":
-            vehicule.disponible = True
+            from datetime import date
+            montant_caution_retenue = contrat.enregistrerRestitution(
+                date_restitution=date.today(),
+                km_retour=vehicule.kilometrage + km_parcourus,
+                defauts_restitution=defauts_restitution
+            )
 
-        # 6. Retirer le véhicule de l’historique des locations du client
-        client.historique_locations.remove(vehicule)
+            vehicule.retourner(km_parcourus, etat_restitution, defauts_restitution)
 
-        # 7. Persister les changements dans les repositories
-        self.vehicule_repository.save(vehicule)
-        self.client_repository.save(client)
+            client.historique_locations.remove(vehicule)
 
-        # 8. Retourner l’objet véhicule mis à jour
-        print(f"Le véhicule {vehicule.marque} {vehicule.modele} (ID: {vehicule.immatriculation}) "
-              f"a été restitué par {client.nom} {client.prenom} avec l'état '{vehicule.etat}'.")
-        return vehicule
+            self.vehicule_repository.save(vehicule)
+            self.client_repository.save(client)
+            self.contrat_repository.save(contrat)
+
+            if montant_caution_retenue > 0:
+                print(f"Attention: {montant_caution_retenue}€ de caution retenue pour les dégâts constatés.")
+            
+            print(f"Le véhicule {vehicule.marque} {vehicule.modele} (ID: {vehicule.immatriculation}) "
+                f"a été restitué par {client.nom} {client.prenom} avec l'état '{vehicule.etat}'.")
+                
+            return vehicule, float(montant_caution_retenue)
+        
+        except Exception as e:
+            print(f"Erreur lors de la restitution: {str(e)}")
+            raise

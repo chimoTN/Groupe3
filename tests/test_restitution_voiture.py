@@ -1,209 +1,223 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import ANY, MagicMock
+from decimal import Decimal
 
 from ..lib.application.use_cases.restitutionVehicule import RestitutionVehicule
 from ..lib.domain.client import Client
 from ..lib.domain.vehicule import Vehicule
+from ..lib.domain.contratLocation import ContratLocation
+from ..lib.repositories.contratRepository import ContratRepository
+from ..lib.repositories.clientRepository import ClientRepository
+from ..lib.repositories.vehiculeRepository import VehiculeRepository
+from ..lib.application.use_cases.restitutionVehicule import RestitutionVehicule
 
-class TestRestitutionVoiture(unittest.TestCase):
+class TestRestitutionVehicule(unittest.TestCase):
 
     def setUp(self):
         """
         Méthode appelée avant chaque test.
-        On y crée des mocks pour les repositories et on instancie le use case.
+        Création des mocks et initialisation du use case.
         """
-        self.mock_client_repo = MagicMock()
-        self.mock_vehicule_repo = MagicMock()
 
-        # Instanciation du use case avec les mocks
+        self.mock_client_repo = MagicMock(spec=ClientRepository)
+        self.mock_vehicule_repo = MagicMock(spec=VehiculeRepository)
+        self.mock_contrat_repo = MagicMock(spec=ContratRepository)
+
         self.use_case = RestitutionVehicule(
             client_repository=self.mock_client_repo,
-            vehicule_repository=self.mock_vehicule_repo
+            vehicule_repository=self.mock_vehicule_repo,
+            contrat_repository=self.mock_contrat_repo
         )
         
-        # Création d'objets Client et Vehicule factices
-        self.client = Client(
-            nom="Doe", 
-            prenom="John", 
-            permis="123ABC", 
-            telephone="0123456789", 
-            email="john.doe@email",
-            voitureLouer=None,
-        )
-        self.vehicule = Vehicule(
-            marque="Peugeot", 
-            modele="208", 
-            annee=2021, 
-            immatriculation="AB-123-CD", 
-            kilometrage=25000, 
-            prix_journalier=45.0,
-            etat="Nickel", 
-            typeVehicule="Citadine"
-        )
+        self.client = MagicMock(spec=Client)
+        self.client.id = 1
+        self.client.nom = "Doe"
+        self.client.prenom = "John"
+        self.client.historique_locations = []
 
-        # On simule l'ajout du véhicule dans l'historique de location du client
-        self.client.historique_locations.append(self.vehicule)
+        self.vehicule = MagicMock(spec=Vehicule)
+        self.vehicule.id = 10
+        self.vehicule.marque = "Peugeot"
+        self.vehicule.modele = "208"
+        self.vehicule.kilometrage = 25000
+        self.vehicule.defauts = []
+        self.vehicule.etat = "Nickel"
 
-        # On prépare le mock : quand on appelle get_by_id, il renvoie notre client/vehicule
+        self.contrat = MagicMock(spec=ContratLocation)
+        self.contrat.getId.return_value = 100
+        self.contrat.getClient.return_value = self.client
+        self.contrat.getVehicule.return_value = self.vehicule
+        self.contrat.getCaution.return_value = 1000.0
+        self.contrat.getDefautsInitiaux.return_value = []
+        
         self.mock_client_repo.get_by_id.return_value = self.client
         self.mock_vehicule_repo.get_by_id.return_value = self.vehicule
+        self.mock_contrat_repo.trouver_contrat_actif.return_value = self.contrat
+        
+        self.client.historique_locations.append(self.vehicule)
 
-    def test_restituer_vehicule_nickel(self):
+    def test_restitution_sans_nouveaux_defauts(self):
         """
-        Test de restitution avec un état 'nickel'.
-        On s'attend à ce que le véhicule soit rendu disponible et son kilométrage mis à jour.
+        Test de restitution sans nouveaux défauts.
+        La caution ne doit pas être retenue.
         """
-        nouveau_km = 300
-        etat = "nickel"
-
-        # Appel au use case
-        result = self.use_case.restituer_vehicule(
+        self.contrat.enregistrerRestitution.return_value = Decimal('0.00')
+        
+        vehicule_restitue, caution_retenue = self.use_case.restituer_vehicule(
             client_id=1,
             vehicule_id=10,
-            km_parcourus=nouveau_km,
-            etat_restitution=etat
+            km_parcourus=300,
+            etat_restitution="Nickel",
+            defauts_restitution=[]
         )
-
-        # Vérifications
-        self.assertIsNotNone(result)
-        self.assertEqual(result.etat, "Nickel")
-        self.assertEqual(result.kilometrage, 25000 + nouveau_km)
-        self.assertTrue(result.disponible)
-        self.assertNotIn(self.vehicule, self.client.historique_locations)
-
-        # Vérifie qu'on a bien sauvegardé les modifications
-        self.mock_vehicule_repo.save.assert_called_once_with(self.vehicule)
+        
+        self.assertIsNotNone(vehicule_restitue)
+        self.assertEqual(caution_retenue, 0.0)
+        
+        self.contrat.enregistrerRestitution.assert_called_once()
+        self.vehicule.retourner.assert_called_once_with(300, "Nickel", [])
         self.mock_client_repo.save.assert_called_once_with(self.client)
-
-    def test_restituer_vehicule_sale(self):
+        self.mock_vehicule_repo.save.assert_called_once_with(self.vehicule)
+        self.mock_contrat_repo.save.assert_called_once_with(self.contrat)
+    
+    def test_restitution_avec_nouveaux_defauts(self):
         """
-        Test de restitution avec un état 'sale'.
+        Test de restitution avec de nouveaux défauts.
+        Une partie de la caution doit être retenue.
         """
-        nouveau_km = 100
-        etat = "sale"
-
-        # Appel au use case
-        result = self.use_case.restituer_vehicule(
+        self.contrat.enregistrerRestitution.return_value = Decimal('200.00')
+        
+        nouveaux_defauts = ["Rayure portière gauche", "Phare avant droit cassé"]
+        
+        vehicule_restitue, caution_retenue = self.use_case.restituer_vehicule(
             client_id=1,
             vehicule_id=10,
-            km_parcourus=nouveau_km,
-            etat_restitution=etat
+            km_parcourus=300,
+            etat_restitution="Endommagé",
+            defauts_restitution=nouveaux_defauts
         )
-
-        self.assertIsNotNone(result)
-        self.assertEqual(result.etat, "Sale")
-        self.assertEqual(result.kilometrage, 25000 + nouveau_km)
-        self.assertTrue(result.disponible)
-        self.assertNotIn(self.vehicule, self.client.historique_locations)
-
-    def test_restituer_vehicule_endommage(self):
+        
+        self.assertIsNotNone(vehicule_restitue)
+        self.assertEqual(caution_retenue, 200.0)
+        
+        self.contrat.enregistrerRestitution.assert_called_once()
+        self.vehicule.retourner.assert_called_once_with(300, "Endommagé", nouveaux_defauts)
+        self.mock_client_repo.save.assert_called_once_with(self.client)
+        self.mock_vehicule_repo.save.assert_called_once_with(self.vehicule)
+        self.mock_contrat_repo.save.assert_called_once_with(self.contrat)
+    
+    def test_restitution_vehicule_vole(self):
         """
-        Test de restitution avec un état 'endommagé'.
+        Test de restitution d'un véhicule volé.
+        La caution doit être entièrement retenue.
         """
-        nouveau_km = 50
-        etat = "endommagé"
-
-        # Appel
-        result = self.use_case.restituer_vehicule(
+        self.contrat.enregistrerRestitution.return_value = Decimal('1000.00')
+        
+        vehicule_restitue, caution_retenue = self.use_case.restituer_vehicule(
             client_id=1,
             vehicule_id=10,
-            km_parcourus=nouveau_km,
-            etat_restitution=etat
+            km_parcourus=0,  
+            etat_restitution="Volé",
+            defauts_restitution=["Véhicule volé"]
         )
-
-        self.assertIsNotNone(result)
-        self.assertEqual(result.etat, "Endommagé")
-        self.assertEqual(result.kilometrage, 25000 + nouveau_km)
-        self.assertTrue(result.disponible)
-        self.assertNotIn(self.vehicule, self.client.historique_locations)
-
-    def test_restituer_vehicule_vole(self):
+        
+        self.assertIsNotNone(vehicule_restitue)
+        self.assertEqual(caution_retenue, 1000.0)
+        
+        self.contrat.enregistrerRestitution.assert_called_once()
+        self.vehicule.retourner.assert_called_once()
+    
+    def test_restitution_avec_defauts_preexistants(self):
         """
-        Test de restitution avec un état 'volé'.
-        Dans l'exemple : on choisit de rendre le véhicule indisponible.
+        Test de restitution avec des défauts qui existaient déjà lors de la signature.
+        La caution ne doit pas être retenue pour ces défauts.
         """
-        # On peut ajuster la logique si, par exemple, vous préférez 
-        # laisser le véhicule indisponible quand il est volé.
-        # Adaptez en fonction de votre logique métier !
-        nouveau_km = 10
-        etat = "volé"
-
-        # Appel
-        result = self.use_case.restituer_vehicule(
+        defauts_initiaux = ["Rayure pare-chocs arrière", "Siège arrière taché"]
+        
+        defauts_restitution = ["Rayure pare-chocs arrière", "Siège arrière taché", "Rétroviseur gauche cassé"]
+        
+        self.contrat.getDefautsInitiaux.return_value = defauts_initiaux
+        self.contrat.enregistrerRestitution.return_value = Decimal('100.00')
+        
+        vehicule_restitue, caution_retenue = self.use_case.restituer_vehicule(
             client_id=1,
             vehicule_id=10,
-            km_parcourus=nouveau_km,
-            etat_restitution=etat
+            km_parcourus=200,
+            etat_restitution="Endommagé",
+            defauts_restitution=defauts_restitution
         )
-
-        self.assertIsNotNone(result)
-        self.assertEqual(result.etat, "Volé")
-        self.assertEqual(result.kilometrage, 25000 + nouveau_km)
-
-        # Si la logique code "volé" met disponible = False :
-        # self.assertFalse(result.disponible) 
-        # OU si vous laissez la disponibilité telle quelle, ajustez le test.
-        self.assertNotIn(self.vehicule, self.client.historique_locations)
-
-    def test_restituer_vehicule_client_inexistant(self):
-        """
-        Cas où le client_id n'est pas trouvé dans le repository
-        => On s'attend à obtenir None
-        """
+        
+        self.assertIsNotNone(vehicule_restitue)
+        self.assertEqual(caution_retenue, 100.0) 
+        
+        self.contrat.enregistrerRestitution.assert_called_once()
+        
+        self.contrat.enregistrerRestitution.assert_called_with(
+            date_restitution=ANY,
+            km_retour=ANY,
+            defauts_restitution=defauts_restitution
+        )
+    
+    def test_restitution_client_inexistant(self):
+        """Test de restitution avec un client inexistant"""
         self.mock_client_repo.get_by_id.return_value = None
-
-        result = self.use_case.restituer_vehicule(
-            client_id=999, 
+        
+        vehicule_restitue, caution_retenue = self.use_case.restituer_vehicule(
+            client_id=999,
             vehicule_id=10,
-            km_parcourus=50,
-            etat_restitution="nickel"
+            km_parcourus=100,
+            etat_restitution="Nickel"
         )
-        self.assertIsNone(result)
-
-    def test_restituer_vehicule_non_trouve(self):
-        """
-        Cas où le vehicule_id n'est pas trouvé dans le repository
-        => On s'attend à obtenir None
-        """
+        
+        self.assertIsNone(vehicule_restitue)
+        self.assertEqual(caution_retenue, 0.0)
+    
+    def test_restitution_vehicule_inexistant(self):
+        """Test de restitution avec un véhicule inexistant"""
         self.mock_vehicule_repo.get_by_id.return_value = None
-
-        result = self.use_case.restituer_vehicule(
-            client_id=1, 
+        
+        vehicule_restitue, caution_retenue = self.use_case.restituer_vehicule(
+            client_id=1,
             vehicule_id=999,
-            km_parcourus=50,
-            etat_restitution="nickel"
+            km_parcourus=100,
+            etat_restitution="Nickel"
         )
-        self.assertIsNone(result)
-
-    def test_restituer_vehicule_non_loue_par_ce_client(self):
-        """
-        Cas où le véhicule n'est pas dans l'historique_locations du client.
-        => On s'attend à obtenir None
-        """
-        # On vide l'historique de locations pour simuler
-        self.client.historique_locations.clear()
-
-        result = self.use_case.restituer_vehicule(
+        
+        self.assertIsNone(vehicule_restitue)
+        self.assertEqual(caution_retenue, 0.0)
+    
+    def test_restitution_sans_contrat_actif(self):
+        """Test de restitution sans contrat actif"""
+        self.mock_contrat_repo.trouver_contrat_actif.return_value = None
+        
+        vehicule_restitue, caution_retenue = self.use_case.restituer_vehicule(
             client_id=1,
             vehicule_id=10,
-            km_parcourus=50,
-            etat_restitution="nickel"
+            km_parcourus=100,
+            etat_restitution="Nickel"
         )
-        self.assertIsNone(result)
-
-    def test_restituer_vehicule_etat_inconnu(self):
-        """
-        Cas où l'état transmis ne correspond pas à "nickel", "sale", "endommagé", ou "volé".
-        => On s'attend à obtenir None
-        """
-        result = self.use_case.restituer_vehicule(
-            client_id=1,
-            vehicule_id=10,
-            km_parcourus=50,
-            etat_restitution="bizarre"  # état inconnu
-        )
-        self.assertIsNone(result)
-
+        
+        self.assertIsNone(vehicule_restitue)
+        self.assertEqual(caution_retenue, 0.0)
+    
+    def test_restitution_avec_exception_dans_contrat(self):
+        """Test de gestion des exceptions lors de l'enregistrement de la restitution"""
+        self.contrat.enregistrerRestitution.side_effect = ValueError("Erreur test")
+        
+        try:
+            vehicule_restitue, caution_retenue = self.use_case.restituer_vehicule(
+                client_id=1,
+                vehicule_id=10,
+                km_parcourus=100,
+                etat_restitution="Nickel"
+            )
+            self.fail("Une exception aurait dû être levée")
+        except ValueError:
+            pass
+        
+        self.mock_client_repo.save.assert_not_called()
+        self.mock_vehicule_repo.save.assert_not_called()
+        self.mock_contrat_repo.save.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()
