@@ -9,7 +9,7 @@ class VehiculeRepositoryPort(abc.ABC):
     #         raise Exception("Abstract classes can't be instantiated")
         
     @abc.abstractmethod
-    def get_by_id(self, vehicule_id: int) -> Optional[Vehicule]:
+    def get_by_immatriculation(self, vehicule_id: int) -> Optional[Vehicule]:
         pass
 
     @abc.abstractmethod

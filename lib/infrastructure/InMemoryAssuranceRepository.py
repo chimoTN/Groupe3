@@ -1,5 +1,3 @@
-# infrastructure/adapters.py
-
 from ..application.ClientRepositoryPort import ClientRepositoryPort
 from ..domain.client import Client
 from ..domain.exceptions import ClientNotFoundException, ClientAlreadyExistsException

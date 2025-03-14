@@ -1,9 +1,8 @@
-# infrastructure/adapters.py
-
 from datetime import date
 from typing import List, Optional
 from ..application.VehiculeRepositoryPort import VehiculeRepositoryPort
 from ..domain.vehicule import Vehicule
+from ..domain.immatriculation import Immatriculation
 from ..domain.exceptions import VehiculeNotFoundException, VehiculeNotAvailableException
 
 class InMemoryVehiculeRepository(VehiculeRepositoryPort):
@@ -17,12 +16,9 @@ class InMemoryVehiculeRepository(VehiculeRepositoryPort):
 
     def _initialize(self):
         self._vehicules = {}
-        self._next_id = 1
 
-    def get_by_id(self, vehicule_id: int) -> Optional[Vehicule]:
-        vehicule = self._vehicules.get(vehicule_id)
-        if vehicule is None:
-            raise VehiculeNotFoundException(f"Véhicule avec l'ID {vehicule_id} non trouvé.")
+    def get_by_immatriculation(self, immatriculation: Immatriculation) -> Optional[Vehicule]:
+        vehicule = self._vehicules.get(immatriculation)
         return vehicule
 
     def get_all(self) -> List[Vehicule]:
@@ -32,47 +28,44 @@ class InMemoryVehiculeRepository(VehiculeRepositoryPort):
         return [v for v in self._vehicules.values() if v.disponible]
 
     def save(self, vehicule: Vehicule) -> int:
-        if not hasattr(vehicule, 'id') or vehicule.id is None:
-            vehicule.id = self._next_id
-            self._next_id += 1
-        self._vehicules[vehicule.id] = vehicule
-        return vehicule.id
+        self._vehicules[vehicule.immatriculation] = vehicule
+        return vehicule.immatriculation
 
-    def delete(self, vehicule_id: int) -> bool:
-        if vehicule_id in self._vehicules:
-            del self._vehicules[vehicule_id]
+    def delete(self, vehicule: Immatriculation) -> bool:
+        if vehicule in self._vehicules:
+            del self._vehicules[vehicule]
             return True
-        raise VehiculeNotFoundException(f"Véhicule avec l'ID {vehicule_id} non trouvé pour suppression.")
+        raise VehiculeNotFoundException(f"Véhicule avec l'ID {vehicule} non trouvé pour suppression.")
 
-    def is_available(self, vehicule_id: int) -> bool:
-        vehicule = self.get_by_id(vehicule_id)
+    def is_available(self, vehicule: Immatriculation) -> bool:
+        vehicule = self.get_by_immatriculastion(vehicule)
         return vehicule.disponible
 
-    def set_availability(self, vehicule_id: int, disponible: bool) -> bool:
-        vehicule = self.get_by_id(vehicule_id)
+    def set_availability(self, vehicule: Immatriculation, disponible: bool) -> bool:
+        vehicule = self.get_by_immatriculation(vehicule)
         vehicule.disponible = disponible
         return True
 
-    def is_available_between(self, vehicule_id: int, date_debut: date, date_fin: date) -> bool:
-        vehicule = self.get_by_id(vehicule_id)
+    def is_available_between(self, vehicule: Immatriculation, date_debut: date, date_fin: date) -> bool:
+        vehicule = self.get_by_immatriculation(vehicule)
         if not vehicule.disponible:
             return False
         return vehicule.disponible
 
-    def louer_vehicule(self, vehicule_id: int) -> bool:
-        vehicule = self.get_by_id(vehicule_id)
+    def louer_vehicule(self, vehicule: Immatriculation) -> bool:
+        vehicule = self.get_by_immatriculation(vehicule)
         if not vehicule.disponible:
-            raise VehiculeNotAvailableException(f"Véhicule avec l'ID {vehicule_id} n'est pas disponible pour la location.")
+            raise VehiculeNotAvailableException(f"Véhicule avec l'ID {vehicule} n'est pas disponible pour la location.")
         vehicule.louer()
         return True
 
-    def retourner_vehicule(self, vehicule_id: int, km_parcourus: int) -> bool:
-        vehicule = self.get_by_id(vehicule_id)
+    def retourner_vehicule(self, vehicule: Immatriculation, km_parcourus: Immatriculation) -> bool:
+        vehicule = self.get_by_immatriculation(vehicule)
         vehicule.retourner(km_parcourus)
         return True
 
-    def calculate_rental_cost(self, vehicule_id: int, duree: int) -> float:
-        vehicule = self.get_by_id(vehicule_id)
+    def calculate_rental_cost(self, vehicule: Immatriculation, duree: int) -> float:
+        vehicule = self.get_by_immatriculation(vehicule)
         return vehicule.prix_journalier * duree
 
     def find_by_criteria(self, marque: Optional[str] = None,
@@ -96,7 +89,7 @@ class InMemoryVehiculeRepository(VehiculeRepositoryPort):
         return results
 
     def create_vehicule(self, marque: str, modele: str, annee: int,
-                        immatriculation: str, kilometrage: int,
+                        immatriculation: Immatriculation, kilometrage: int,
                         prix_journalier: float, etat: str,
                         type_vehicule: str) -> Vehicule:
         vehicule = Vehicule(marque, modele, annee, immatriculation,

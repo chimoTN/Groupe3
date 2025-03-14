@@ -1,5 +1,3 @@
-# infrastructure/adapters.py
-
 from ..application.ContratRepositoryPort import ContratRepositoryPort
 from ..domain.contratLocation import Contrat
 from ..domain.assurance import Assurance

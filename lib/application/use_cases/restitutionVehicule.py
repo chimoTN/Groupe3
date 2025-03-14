@@ -38,7 +38,7 @@ class RestitutionVehicule:
 
         # 1. Récupérer le client et le véhicule via les repositories
         client = self.client_repository.get_by_id(client_id)
-        vehicule = self.vehicule_repository.get_by_id(vehicule_id)
+        vehicule = self.vehicule_repository.get_by_immatriculation(vehicule_id)
 
         if not client or not vehicule:
             print("Restitution échouée : client ou véhicule introuvable.")
